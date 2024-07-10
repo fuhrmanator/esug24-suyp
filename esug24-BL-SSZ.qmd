@@ -1,0 +1,367 @@
+---
+date: 2024-07-11
+title: "Analyzing TypeScript projects in Moose"
+---
+
+# Moose
+
+Moose is a platform for software analysis,
+
+A software system is modeled, and Moose can query, manipulate, transform, visualize this model.
+
+Moose is based on Pharo and it’s open source under BSD/MIT.
+
+<https://modularmoose.org/>
+
+# Modelling
+
+To produce a model, an importer is needed. The importer reads the source code and produces a model. 
+
+Since we're modeling TypeScript projects, we need a **metamodel** for TypeScript.
+
+`ts2famix` is an importer for TypeScript projects. 
+
+# Analyzing TypeScript
+
+```{.plantuml caption="Overview"}
+@startdot
+digraph a {
+  bgcolor="transparent"
+  node[group=a, fontname="Arial", fontsize=14];
+  subgraph pipeline {
+    rank="same";
+    node[style=filled];
+    input [fillcolor=lightblue shape=folder label="TypeScript\nsource code (*.ts)\nto analyze"];
+    ts2famix [fillcolor=yellow shape=box label="ts2famix"];
+    model [fillcolor=orange shape=box label="model\n(json)"];
+    moose [fillcolor=aquamarine shape=box label="Moose\n(Pharo)"];
+    analyze [shape=note label="Static Analysis" fontsize=10]
+    input -> ts2famix -> model -> moose -> analyze;
+  }
+  edge[style="dashed"];
+  node[fillcolor=lightgreen style="rounded,filled" shape="box"]
+  mm [label = "FamixTypeScript\nMetamodel"]
+  mm -> moose [style=""]
+  edge[color="gray"]
+  mm -> { ts2famix model } ;
+}
+@enddot
+```
+
+# Metamodel
+
+```{.plantuml caption="Overview"}
+@startdot
+digraph a {
+  bgcolor="transparent"
+  node[fillcolor=lightgreen style="rounded,filled" shape="box"]
+  mm [label = "FamixTypeScript\nMetamodel"]
+}
+@enddot
+```
+
+- FamixTypeScript is a metamodel for TypeScript
+
+[![](assets/FamixTypeScript.svg)](https://raw.githubusercontent.com/fuhrmanator/FamixTypeScript/M11-migration/doc-uml/FamixTypeScript.svg)
+
+## Entities defined using FamixNG DSL
+
+```st
+defineClasses
+
+	super defineClasses.
+	
+	access := builder newClassNamed: #Access.
+	accessor := builder newClassNamed: #Accessor comment: 'I represent a TypeScript Accessor (getter or setter)'.
+	alias := builder newClassNamed: #Alias.
+	attribute := builder newClassNamed: #Attribute.
+	behaviouralEntity := builder newClassNamed: #BehaviouralEntity comment: 'I represent an abstraction of various entities that have behavior.'.
+	class := builder newClassNamed: #Class comment: 'I represent a TypeScript class.'.
+	class withTesting.
+	concretization := builder newClassNamed: #Concretization comment: self commentForConcretization.
+	containerEntity := builder newClassNamed: #ContainerEntity.
+	
+	"This definition concerns stage 2 decorators: https://www.typescriptlang.org/docs/handbook/decorators.html"
+	decorator:= builder newClassNamed: #Decorator comment: 'I represent a TypeScript Decorator'.
+
+	enum := builder newClassNamed: #Enum comment: 'I represent a Typescript enumerated type'.
+	enumValue := builder newClassNamed: #EnumValue comment: 'I represent One value (constant) in a Typescript enumerated type'.
+
+	property := builder newClassNamed: #Property comment: 'I represent a TypeScript class property.'.
+	file := builder newClassNamed: #File.
+	folder := builder newClassNamed: #Folder.
+	function := builder newClassNamed: #Function comment: 'I represent a TypeScript function.'.
+	parametricFunction := builder newClassNamed: #ParametricFunction comment: 'I represent a TypeScript parametric function.' .
+	arrowFunction := builder newClassNamed: #ArrowFunction comment: 'I represent a TypeScript arrow function.'. 
+	parametricArrowFunction := builder newClassNamed: #ParametricArrowFunction comment: 'I represent a TypeScript parametric arrow function.' .
+	implicitVariable:= builder newClassNamed: #implicitVariable comment: 'I represent a TypeScript implicit variable.'.
+	implementation := builder newClassNamed: #Implementation comment: 'I represent a TypeScript element that is an implementation of an interface.'.
+	importClause:= builder newClassNamed: #ImportClause.
+	indexedFileAnchor := builder newClassNamed: #IndexedFileAnchor.
+	inheritance := builder newClassNamed: #Inheritance.
+	interface := builder newClassNamed: #Interface comment: 'I represent a TypeScript interface.'.
+	interface withTesting.
+	invocation := builder newClassNamed: #Invocation.
+	jsDoc := builder newClassNamed: #JSDoc comment: 'I represent a TypeScript (JavaScript) Doc element.'.
+	method := builder newClassNamed: #Method comment: 'I represent a TypeScript method.'.
+	parametricMethod := builder newClassNamed: #ParametricMethod comment: 'I represent a TypeScript parametric Method.'.
+	module := builder newClassNamed: #Module.
+	namespace := builder newClassNamed: #Namespace.
+	parameter := builder newClassNamed: #Parameter.
+	parametricClass := builder newClassNamed: #ParametricClass.
+	parameterConcretization := builder newClassNamed: #ParameterConcretization  comment: self commentForParameterConcretization. 
+	parametricInterface := builder newClassNamed: #ParametricInterface.
+	parameterType := builder newClassNamed: #ParameterType.
+	primitiveType := builder newClassNamed: #PrimitiveType comment: 'I represent a TypeScript primitive type (string, number, boolean).'.
+	reference:= builder newClassNamed: #Reference.
+	scriptEntity :=builder newClassNamed: #ScriptEntity.
+	scopingEntity:= builder newClassNamed: #ScopingEntity.
+	structuralEntity := builder newClassNamed: #StructuralEntity.
+	type := builder newClassNamed: #Type comment: 'I represent a TypeScript type.'.
+	variable := builder newClassNamed: #Variable comment: 'I represent a TypeScript variable.'.
+	
+	primitiveType withTesting.
+	"self defineComments."
+```
+
+## Hierarchies defined using FamixNG DSL
+
+```st
+defineHierarchy
+
+	super defineHierarchy.
+
+	access --|> #TAccess.
+	
+	accessor --|> method.
+	
+	alias --|> namedEntity.
+	alias --|> #TImportable.
+	
+	behaviouralEntity --|> containerEntity.
+
+	class --|> type.
+	class --|> #TClass.
+	class --|> #TLCOMMetrics.
+	class --|> #TCanBeAbstract.
+	"class --|> #THasVisibility." "classes in modules/namespaces can't be declared private/public"
+	class --|> #TClassMetrics.
+	class --|> tTypeScriptClassMetrics.
+	class --|> #TCanImplement.
+	class --|> #TImportable.
+	class --|> #TWithAccesses.
+	class --|> #TWithInvocations.
+	"The following come from #TClass"
+	"class --|> #TWithMethods.
+	class --|> #TWithInheritances.
+	class --|> #TWithAttributes.
+	class --|> #TInvocationsReceiver.
+	class --|> #TWithComments."
+
+	"this level of hierarchy to follow Java's metamodel, to accommodate Interfac properly TODO"
+	containerEntity --|> namedEntity.
+	containerEntity --|> #TWithClasses.
+	containerEntity --|> tWithInterfaces.
+	containerEntity --|> #TWithFunctions.
+	containerEntity --|> #TWithAnnotationTypes.
+	containerEntity --|> #TWithLocalVariables.
+	"containerEntity --|> #TWithModules?"
+
+	decorator --|>namedEntity.
+	decorator --|> #TImportable.
+	
+	enum --|> type.
+	enum --|> #TEnum.
+	enum --|> #TWithComments.
+	enum --|> #TImportable.
+
+	enumValue --|> structuralEntity.
+	enumValue --|> #TWithComments.
+	enumValue --|> #TEnumValue.
+
+	file --|> namedEntity.
+	file --|> #TFile.
+
+	folder --|> namedEntity.
+	folder --|> #TFolder.
+
+	function --|> behaviouralEntity.
+	function --|> #TFunction.
+	function --|> #TDefinedInModule.
+	function --|> #TInvocable.
+	function --|> #TImportable.
+	
+	parametricFunction --|> function.
+	parametricFunction --|> #TParametricEntity. 
+	
+	arrowFunction --|> behaviouralEntity.
+	arrowFunction --|> #TFunction.
+	arrowFunction --|> #TDefinedInModule.
+	arrowFunction --|> #TInvocable.
+	arrowFunction --|> #TImportable.
+	
+	parametricArrowFunction --|> arrowFunction.
+	parametricArrowFunction  --|> #TParametricEntity. 
+
+	implicitVariable --|> variable.
+	
+	importClause --|> #TImport.
+	
+	indexedFileAnchor --|> sourceAnchor.
+	indexedFileAnchor --|> #TIndexedFileNavigation.
+	
+	interface --|> type.
+	interface --|> #TWithMethods.
+	interface --|> #TWithInheritances.
+	interface --|> #TWithAttributes.
+	interface --|> #TInvocationsReceiver.
+	"interface --|> #THasVisibility." "classes in modules/namespaces can't be declared private/public"
+	interface --|> #TWithComments.
+	interface --|> #TImplementable.
+	"interface --|> #TWithImports."
+	"interface --|> #TImportable." "Gets it from type?"
+
+	inheritance --|> #TInheritance.
+
+	invocation --|> #TInvocation.
+	invocation --|> #THasSignature.
+
+	implementation --|> #TImplementation.
+	
+	jsDoc --|> sourcedEntity.
+
+	method --|> behaviouralEntity.
+	method --|> #TMethod.
+	method --|> #TCanBeAbstract.
+	method --|> #THasKind.
+	method --|> #THasVisibility.
+	method --|> #TWithComments.
+	method --|> #TCanBeClassSide.
+	
+	parametricMethod --|> method.
+	parametricMethod --|> #TParametricEntity.
+
+	"Module"
+	module --|> scriptEntity.
+	module --|> #TWithLocalVariables. "var can have module scope"
+	module --|> #TWithImports.
+	module --|> #TImportable.
+
+	namespace --|> scopingEntity.
+	namespace --|> #TNamespace. "no use (empty trait)"
+	namespace --|> #TDefinedInModule.
+	namespace --|> #TImportable.
+
+	namedEntity --|> sourcedEntity.
+	namedEntity --|> #TInvocationsReceiver.
+	namedEntity --|> #TEntityMetaLevelDependency.
+	namedEntity --|> #TImportable. "Allow us abstract imported entities"
+
+	parameter --|> structuralEntity.
+	parameter --|> #TParameter.
+
+	parameterType --|> type.
+	parameterType --|> #TGenericParameterType.
+	
+	parametricClass --|> class.
+	"parameterizableClass --|> #TWithParameterizedTypes."
+	parametricClass --|> #TParametricEntity.
+
+	parametricInterface --|> interface.
+	"parameterizableInterface --|> #TWithParameterizedTypes."
+	parametricInterface --|> #TParametricEntity.
+
+	"fusion avec paraterizableClass"
+	"parameterizedType --|> type."
+	"parameterizedType --|> #TParameterizedType."
+	"parameterizedType --|> #TParametricEntity."
+	"parameterizedType --|> #TWithParameterizedTypeUsers."
+	"parameterizedType --|> #TWithInheritances."
+	"parameterizedType --|> #TCanImplement."
+	"parameterizedType --|> #TImplementable."
+	
+	primitiveType --|> type.
+	primitiveType --|> #TPrimitiveType.
+	
+	type --|> #TConcreteParameterType.
+
+	concretization --|> #TConcretization.
+
+	parameterConcretization --|> #TParameterConcretization.
+
+	property --|> structuralEntity.
+	property --|> #TAttribute.
+	property --|> #TCanBeClassSide.
+	property --|> #THasVisibility.
+	
+	scopingEntity --|> containerEntity.
+	scopingEntity --|> #TWithAccesses.
+	scopingEntity --|> #TWithInvocations.
+	
+	scriptEntity --|> scopingEntity.
+	scriptEntity --|> #TWithStatements.
+	
+	structuralEntity --|> #TStructuralEntity.
+	structuralEntity --|> namedEntity.
+
+	tWithInterfaces --|> #TWithTypes.
+
+	type --|> containerEntity.
+	type --|> #TType.
+	"type --|> #TParameterizedTypeUser."
+	type --|> #TWithMethods.
+	type --|> #TImportable.
+	
+	variable --|> structuralEntity.
+	variable --|> #TLocalVariable.
+	variable --|> #TImportable.
+
+	parameterType --|> #TWithInheritances.
+	
+	attribute --|> namedEntity.
+	attribute --|> #TAttribute.
+	attribute --|> #TCanBeFinal.
+	attribute --|> #THasVisibility.
+	attribute --|> #TInvocationsReceiver.
+	attribute --|> #TWithComments.
+	attribute --|> #TCanBeClassSide.
+```
+
+# Importer (ts2famix)
+
+- APIs
+  - `ts-morph` (wrapper for TypeScript compiler API)
+  - Famix elements (hand-coded, forked from ABAP metamodel in TypeScript by Pascal Erni)
+- published as an npm package
+- generates a Famix model of a TypeScript project
+
+> `ts2famix -i myproject/tsconfig.json -o myproject-model.json`
+
+## Famix Elements API
+
+![](assets/importer-metamodel.svg)
+
+# Improvements for Moose 11+
+
+- Generics Metamodel Moose 11+
+- Support ArrowFunctions
+- Relative file names (source anchors)
+- Cleaner Metamodel
+- More tests for Metamodel (63) and importer (290)
+- Automated build/release GitHub Actions
+
+
+# To Do
+
+- Complete modeling of Imports
+- Projects with no `tsconfig.json` (correct relative Source Anchors)
+- Testing on more projects
+
+# Demo
+
+- Create a Famix model of a TypeScript project
+```
+ts2famix -i myproject/tsconfig.json -o myproject-model.json
+```
+- Load the Famix model in Moose
+- Analyze the TypeScript project in Moose

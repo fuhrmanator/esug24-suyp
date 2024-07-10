@@ -1,4 +1,26 @@
-title: "ts2famix: TypeScript importer for Moose 11+"
-author: "John Doe"
-format: revealjs
+lang: fr-FR
+subtitle: "![](logo_ets.svg)  \nMontreal, Quebec, Canada"
+author:
+  - name: Christopher Fuhrman
+    email: christopher.fuhrman@etsmtl.ca
+  - name: Nour Ayechi
+    email: contact.ayechinour@gmail.com
+format:
+  revealjs:
+    touch: false
+    # template-partials: 
+    #   - partials/title-slide.html
+    pdf-separate-fragments: false
+    pdf-page-height-offset: 500
+    theme: beige
+    highlight-style: github
+    syntax-definitions: 
+      - syntax-highlighters/smalltalk.xml
+
+filters: 
+  - filters/diagram-generator.lua
+  # - filters/en-nbsp.lua
+  - filters/inline-svg.lua
+  - filters/pandoc-quotes.lua
+  - quarto
 

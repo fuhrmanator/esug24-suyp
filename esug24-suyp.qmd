@@ -1,17 +1,58 @@
 ---
-title: "ts2famix - TypeScript importer for Moose 11+"
+date: 2024-07-11
+title: "ts2famix: TypeScript importer for Moose 11+"
 ---
 
-# ts2Famix
+# ts2famix
 
-ESUG23 - TypeScript importer for Moose 10
+Modeling TypeScript projects in Moose
 
-Improvements for Moose 11+:
-    - Generics Metamodel Moose 11+
-    - ArrowFunctions
-    - Relative file names (source anchors)
-    - Cleaner Metamodel
-    - more tests (Metamodel and importer)
-    - Automated build/release GitHub Actions
+```{.plantuml caption="Important principles for this tutorial"}
+@startdot
+digraph a {
+  bgcolor="transparent"
+  node[group=a, fontname="Arial", fontsize=14];
+  subgraph pipeline {
+    rank="same";
+    node[style=filled];
+    input [fillcolor=lightblue shape=folder label="TypeScript\nsource code (*.ts)\nto analyze"];
+    ts2famix [fillcolor=yellow shape=box label="ts2famix"];
+    model [fillcolor=orange shape=box label="model\n(json)"];
+    moose [fillcolor=aquamarine shape=box label="Moose\n(Pharo)"];
+    analyze [shape=note label="Static Analysis" fontsize=10]
+    input -> ts2famix -> model -> moose -> analyze;
+  }
+  edge[style="dashed"];
+  node[fillcolor=lightgreen style="rounded,filled" shape="box"]
+  mm [label = "FamixTypeScript\nMetamodel"]
+  mm -> moose [style=""]
+  edge[color="gray"]
+  mm -> { ts2famix model } ;
+}
+@enddot
+```
 
-# 
+# Improvements for Moose 11+
+
+- Generics Metamodel Moose 11+
+- ArrowFunctions
+- Relative file names (source anchors)
+- Cleaner Metamodel
+- more tests (Metamodel and importer)
+- Automated build/release GitHub Actions
+
+# To Do
+
+- Complete modeling of Imports
+- Projects with no tsconfig.json (correct, relative Source Anchors)
+- Testing on more projects
+
+# Demo
+
+- Create a Famix model of a TypeScript project
+```
+ts2famix -i myproject/tsconfig.json -o myproject-model.json
+```
+- Load the Famix model in Moose
+- Analyze the TypeScript project in Moose
+
