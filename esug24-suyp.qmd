@@ -1,6 +1,6 @@
 ---
 date: 2024-07-11
-title: "ts2famix: TypeScript importer for Moose 11+"
+title: "TypeScript importer for Moose 11+"
 ---
 
 # ts2famix
@@ -38,7 +38,7 @@ digraph a {
 - ArrowFunctions
 - Relative file names (source anchors)
 - Cleaner Metamodel
-- more tests (Metamodel and importer)
+- Tests Metamodel 60+ and Importer 250+
 - Automated build/release GitHub Actions
 
 # To Do
@@ -53,6 +53,17 @@ digraph a {
 ```
 ts2famix -i myproject/tsconfig.json -o myproject-model.json
 ```
+- Load the FamixTypeScript metamodel into Pharo/Moose
+  ```st
+Metacello new
+	githubUser: 'fuhrmanator' project: 'FamixTypeScript' commitish: 'M11-migration' path: 'src';
+	baseline: 'FamixTypeScript';
+	load
+```
+
 - Load the Famix model in Moose
+
+> Drag and drop the `myproject-model.json` file into the Moose image
+
 - Analyze the TypeScript project in Moose
 
